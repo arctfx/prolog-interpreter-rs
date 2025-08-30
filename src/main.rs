@@ -76,28 +76,37 @@ impl App {
             let tokens = tokenize(query_str);
             let mut parser = Parser::new(tokens);
             match parser.parse_statement() {
-                Statement::Query { body } => body,
+                Ok(Statement::Query { body }) => body,
                 _ => return vec!["Expected a query!".to_string()],
             }
         };
 
-        let tree = solver::resolve_query(&query, &stmts);
-        let query_vars = get_query_vars(&query);
-        let results = extract_query_results(&tree, &query_vars);
+        match stmts {
+            Ok(stmts) => {
+                let tree = solver::resolve_query(&query, &stmts);
+                let query_vars = get_query_vars(&query);
+                let results = extract_query_results(&tree, &query_vars);
 
-        if results.is_empty() {
-            vec!["No solutions.".to_string()]
-        } else {
-            results
-                .into_iter()
-                .map(|subs| {
-                    subs.into_iter()
-                        .map(|(var, term)| format!("{} = {:?}", var, term))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                })
-                .collect()
+                if results.is_empty() {
+                    vec!["No solutions.".to_string()]
+                } else {
+                    results
+                        .into_iter()
+                        .map(|subs| {
+                            subs.into_iter()
+                                .map(|(var, term)| format!("{} = {:?}", var, term))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        })
+                        .collect()
+                }
+            }
+            Err(e) => {
+                eprintln!("Parse error: {}", e);
+                vec!["Error".to_string()]
+            }
         }
+
     }
 
 
@@ -323,7 +332,8 @@ Enter        Newline (Editor) / Run (Console)\n\
                                             app.output.extend(output_vec);
                                         }
                                         Err(_) => {
-                                            app.output.push("Error: not a query or a command!".to_string());
+                                            app.output.push("Error: not a query or a command! (or database has errors)".to_string());
+
                                         }
                                     }
 

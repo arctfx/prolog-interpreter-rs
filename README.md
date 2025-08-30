@@ -25,7 +25,7 @@ _SimpleProlog_ няма да бъде функциониращ без да им�
 query -> ?- fact[, fact]
 ```
 ## To-Do
-
+_Use Result instead of panic! in the tokenizer and parser._
 ## Structure
 
 ### UI
