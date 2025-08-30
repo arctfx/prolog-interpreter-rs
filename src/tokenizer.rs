@@ -42,7 +42,7 @@ pub struct Database {
     pub rules: Vec<Rule>,
 }
 
-pub fn tokenize(input: &str) -> Vec<Token> {
+pub fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
@@ -77,22 +77,23 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     if i + 1 < chars.len() && chars[i+1] == '-' {
                         tokens.push(Token::RuleArrow);
                         i += 2;
-                    } else { panic!("Unexpected ':'"); }
+                    } else { return Err("Unexpected ':'".to_string()) }
                 }
                 '?' => {
                     if i + 1 < chars.len() && chars[i + 1] == '-' {
                         tokens.push(Token::QueryOperator);
                         i += 2;
                     } else {
-                        panic!("Unexpected '?'");
+                        return Err("Unexpected '?'".to_string())
                     }
                 }
-                _ => panic!("Unknown char: {}", c)
+                _ => return Err(format!("Unknown char '{}' at position {}", c, i))
+
             }
         }
     }
 
-    tokens
+    Ok(tokens)
 }
 
 
@@ -104,67 +105,137 @@ mod tests {
     #[test]
     fn test_tokenize() {
         let tokens = tokenize("parent(X, Y).");
-        assert_eq!(tokens, vec![
-            Token::Identifier("parent".to_string()),
-            Token::LParen,
-            Token::Variable("X".to_string()),
-            Token::Comma,
-            Token::Variable("Y".to_string()),
-            Token::RParen,
-            Token::Period
-        ]);
+        match tokens {
+            Ok(tokens) => {
+                assert_eq!(tokens, vec![
+                    Token::Identifier("parent".to_string()),
+                    Token::LParen,
+                    Token::Variable("X".to_string()),
+                    Token::Comma,
+                    Token::Variable("Y".to_string()),
+                    Token::RParen,
+                    Token::Period
+                ]);
+            }
+            Err(err) => {
+                panic!("{:?}", err);
+            }
+        }
+
     }
 
     #[test]
     fn test_tokenize_identifier() {
         let tokens = tokenize("abc");
-        assert_eq!(tokens, vec![Token::Identifier("abc".to_string())]);
+        match tokens {
+            Ok(tokens) => {
+                assert_eq!(tokens, vec![Token::Identifier("abc".to_string())]);
+            },
+            Err(err) => {
+                panic!("{:?}", err);
+            }
+        }
+
     }
 
     #[test]
     fn test_tokenize_variable() {
         let tokens = tokenize("X");
-        assert_eq!(tokens, vec![Token::Variable("X".to_string())]);
+        match tokens {
+            Ok(tokens) => {
+                assert_eq!(tokens, vec![Token::Variable("X".to_string())]);
+            },
+            Err(err) => {
+                panic!("{:?}", err);
+            }
+        }
     }
 
     #[test]
     fn test_tokenize_symbols() {
         let tokens = tokenize("(),.");
-        assert_eq!(tokens, vec![
-            Token::LParen, Token::RParen, Token::Comma, Token::Period
-        ]);
+        match tokens {
+            Ok(tokens) => {
+                assert_eq!(tokens, vec![
+                    Token::LParen, Token::RParen, Token::Comma, Token::Period
+                ]);
+            },
+            Err(err) => {
+                panic!("{:?}", err);
+            }
+        }
     }
 
     #[test]
     fn test_tokenize_rule_arrow() {
         let tokens = tokenize(":-");
-        assert_eq!(tokens, vec![Token::RuleArrow]);
+        match tokens {
+            Ok(tokens) => {
+                assert_eq!(tokens, vec![Token::RuleArrow]);
+            },
+            Err(err) => {
+                panic!("{:?}", err);
+            }
+        }
+
     }
 
     #[test]
     fn test_tokenize_query_operator() {
         let tokens = tokenize("?-");
-        assert_eq!(tokens, vec![Token::QueryOperator]);
+        match tokens {
+            Ok(tokens) => {
+                assert_eq!(tokens, vec![Token::QueryOperator]);
+            },
+            Err(err) => {
+                panic!("{:?}", err);
+            }
+        }
+
     }
 
     #[test]
-    #[should_panic(expected = "Unexpected '?'")]
+    //#[should_panic(expected = "Unexpected '?'")]
     fn test_tokenize_unexpected_question() {
         // Single '?' without '-' is invalid
         let _tokens = tokenize("?.");
+        match _tokens {
+            Ok(tokens) => {
+                panic!("Invalid tokens: {:?}", tokens);
+            }
+            Err(err) => {
+                // good
+            }
+        }
     }
 
     #[test]
-    #[should_panic(expected = "Unknown char: #")]
+    //#[should_panic(expected = "Unknown char: #")]
     fn test_tokenize_unknown_char() {
         let _tokens = tokenize("parent(X, y#)");
+        match _tokens {
+            Ok(tokens) => {
+                panic!("Invalid tokens: {:?}", tokens);
+            }
+            Err(err) => {
+                // good
+            }
+        }
     }
 
     #[test]
-    #[should_panic(expected = "Unexpected ':'")]
+    //#[should_panic(expected = "Unexpected ':'")]
     fn test_tokenize_unexpected_colon() {
         // Single ':' without '-' is invalid
         let _tokens = tokenize(":.");
+        match _tokens {
+            Ok(tokens) => {
+                panic!("Invalid tokens: {:?}", tokens);
+            }
+            Err(err) => {
+                // good
+            }
+        }
     }
 
 }

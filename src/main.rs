@@ -21,7 +21,7 @@ use ratatui::{
 use std::io;
 use crate::parser::{build_database, Parser};
 use crate::solver::{extract_query_results, get_query_vars};
-use crate::tokenizer::{tokenize, Statement};
+use crate::tokenizer::{tokenize, Statement, Token};
 
 #[derive(PartialEq)]
 enum Focus {
@@ -69,41 +69,54 @@ impl App {
     fn evaluate_query(&self, query_str: &str) -> Vec<String> {
         let db_text = self.editor.join("\n");
         let tokens = tokenize(&db_text);
-        let mut parser = Parser::new(tokens);
-        let stmts = parser.parse_program();
+        match tokens {
+            Ok(tokens) => {
+                let mut parser = Parser::new(tokens);
+                let stmts = parser.parse_program();
 
-        let query = {
-            let tokens = tokenize(query_str);
-            let mut parser = Parser::new(tokens);
-            match parser.parse_statement() {
-                Ok(Statement::Query { body }) => body,
-                _ => return vec!["Expected a query!".to_string()],
-            }
-        };
+                let query = {
+                    let tokens = tokenize(query_str);
+                    match tokens {
+                        Ok(tokens) => {
+                            let mut parser = Parser::new(tokens);
+                            match parser.parse_statement() {
+                                Ok(Statement::Query { body }) => body,
+                                _ => return vec!["Expected a query!".to_string()],
+                            }
+                        },
+                        _ => return vec!["Tokenizer error".to_string()]
+                    }
+                };
 
-        match stmts {
-            Ok(stmts) => {
-                let tree = solver::resolve_query(&query, &stmts);
-                let query_vars = get_query_vars(&query);
-                let results = extract_query_results(&tree, &query_vars);
+                match stmts {
+                    Ok(stmts) => {
+                        let tree = solver::resolve_query(&query, &stmts);
+                        let query_vars = get_query_vars(&query);
+                        let results = extract_query_results(&tree, &query_vars);
 
-                if results.is_empty() {
-                    vec!["No solutions.".to_string()]
-                } else {
-                    results
-                        .into_iter()
-                        .map(|subs| {
-                            subs.into_iter()
-                                .map(|(var, term)| format!("{} = {:?}", var, term))
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        })
-                        .collect()
+                        if results.is_empty() {
+                            vec!["No solutions.".to_string()]
+                        } else {
+                            results
+                                .into_iter()
+                                .map(|subs| {
+                                    subs.into_iter()
+                                        .map(|(var, term)| format!("{} = {:?}", var, term))
+                                        .collect::<Vec<_>>()
+                                        .join(", ")
+                                })
+                                .collect()
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Parse error: {}", e);
+                        vec!["Parse error".to_string()]
+                    }
                 }
-            }
+            },
             Err(e) => {
-                eprintln!("Parse error: {}", e);
-                vec!["Error".to_string()]
+                eprintln!("Tokenize error: {}", e);
+                vec!["Tokenize error".to_string()]
             }
         }
 

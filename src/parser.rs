@@ -177,39 +177,52 @@ mod tests {
     fn test_parse() {
         let input = "?- ancestor(father(john), X), parent(X, mary).";
         let tokens = tokenize(input);
-        let mut parser = Parser::new(tokens);
-        let stmt = parser.parse_statement();
+        match tokens {
+            Ok(T) => {
+                let mut parser = Parser::new(T);
+                let stmt = parser.parse_statement();
 
-        match stmt {
-            Ok(stmt) => {
-                //println!("{:#?}", stmt);
-                let st = Statement::Query {
-                    body: vec![
-                        Atom { name: "ancestor".to_string(),
-                            args: vec![
-                                Compound { name: String::from("father"), args: vec![
-                                    Constant(String::from("john")),
-                                ] },
-                                Variable(String::from("X")),
+                match stmt {
+                    Ok(stmt) => {
+                        //println!("{:#?}", stmt);
+                        let st = Statement::Query {
+                            body: vec![
+                                Atom {
+                                    name: "ancestor".to_string(),
+                                    args: vec![
+                                        Compound {
+                                            name: String::from("father"),
+                                            args: vec![
+                                                Constant(String::from("john")),
+                                            ]
+                                        },
+                                        Variable(String::from("X")),
+                                    ]
+                                },
+                                Atom {
+                                    name: "parent".to_string(),
+                                    args: vec![
+                                        Variable(String::from("X")),
+                                        Constant(String::from("mary")),
+                                    ]
+                                },
                             ]
-                        },
-                        Atom {
-                            name: "parent".to_string(),
-                            args: vec![
-                                Variable(String::from("X")),
-                                Constant(String::from("mary")),
-                            ]
-                        },
-                    ]
-                };
-                //println!("{:#?}", st);
+                        };
+                        //println!("{:#?}", st);
 
-                assert_eq!(stmt, st)
+                        assert_eq!(stmt, st)
+                    }
+                    Err(err) => {
+                        panic!("{:?}", err);
+                    }
+                }
             }
             Err(err) => {
-                //
+                panic!("{:?}", err);
             }
         }
+
+
     }
 
     #[test]
